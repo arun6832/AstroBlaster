@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AstroBlaster Typer</title>
+  <style>
+    /* Styles remain unchanged */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(to bottom, #0a1f2a, #1b2d44);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+    }
+
+    h1 {
+      margin: 20px 0 10px;
+      font-size: 40px;
+      text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.7);
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    #gameCanvas {
+      display:inline-block;
+      margin: 10px auto;
+      border: 3px solid #ff5722;
+      border-radius: 50px;
+      background: url('https://www.w3schools.com/w3images/space.jpg') center / cover no-repeat;
+      box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.7);
+      /* height: 600px;
+      width: 600px; */
+    }
+
+    #info {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    #score, #highScore, #lives, #level {
+      font-size: 20px;
+      margin-top: 5px;
+    }
+
+    #start-btn, #restart-btn {
+      padding: 14px 28px;
+      font-size: 20px;
+      background-color: #ff5722;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 15px;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, background-color 0.2s;
+      font-family: 'Orbitron', sans-serif;
+      margin-top: 15px;
+    }
+
+    #start-btn:hover, #restart-btn:hover {
+      background-color: #e64a19;
+      transform: scale(1.1);
+    }
+
+    #start-btn:active, #restart-btn:active {
+      background-color: #d84315;
+    }
+
+    #lives {
+      font-size: 22px;
+      font-weight: bold;
+      color: #ff5252;
+    }
+
+    #wordInput {
+      padding: 12px;
+      font-size: 20px;
+      width: 300px;
+      text-align: center;
+      margin-top: 20px;
+      border-radius: 10px;
+      border: 2px solid #ff5722;
+      outline: none;
+      color: white;
+      background-color: #333;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    #wordInput:focus {
+      border-color: #ff9800;
+    }
+
+    #endMessage {
+      font-size: 24px;
+      margin-top: 20px;
+      color: #FFD700;
+      text-shadow: 0px 4px 8px rgba(255, 215, 0, 0.7);
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <h1>AstroBlaster Typer</h1>
+  <div id="info">
+    <p id="score">Score: 0</p>
+    <p id="highScore">High Score: 0</p>
+    <p id="lives">Lives Remaining: 3</p>
+    <p id="level">Level: 1</p>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+  <input type="text" id="wordInput" placeholder="Type the word here..." />
+  <button id="start-btn">Start Game</button>
+  <button id="restart-btn" style="display:none;">Restart Game</button>
+  <p id="endMessage"></p>
+
+  <audio id="bgMusic" loop>
+    <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" type="audio/mp3">
+    Your browser does not support the audio element.
+  </audio>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const bgMusic = document.getElementById("bgMusic");
+    canvas.width = 800;
+    canvas.height = 600;
+
+    let words = [];
+    let score = 0;
+    let highScore = 0;
+    let speed = 0.1;
+    let lives = 3;
+    let currentLevel = 1;
+    let wordsTypedThisLevel = 0;
+    let isGameRunning = false;
+
+    const wordList = [
+  "space", "galaxy", "rocket", "planet", "asteroid", "comet", "star", "meteor",
+  "orbit", "alien", "cosmos", "gravity", "explore", "nebula", "universe", "voyage",
+  "apple", "banana", "cherry", "grape", "melon", "orange", "kiwi", "peach", "pear", 
+  "mango", "strawberry", "blueberry", "watermelon", "plum", "apricot", "cantaloupe", 
+  "tomato", "carrot", "cucumber", "broccoli", "spinach", "lettuce", "celery", "onion", 
+  "garlic", "lemon", "lime", "avocado", "fig", "papaya", "pomegranate", "persimmon", 
+  "cabbage", "cauliflower", "eggplant", "zucchini", "radish", "bean", "peas", "corn", 
+  "asparagus", "potato", "sweet potato", "pumpkin", "chili", "pepper", "chili", "ginger", 
+  "soybean", "beet", "turnip", "squash", "arugula", "parsley", "basil", "oregano", 
+  "rosemary", "sage", "thyme", "tarragon", "marjoram", "mint", "cilantro", "dill", "chive", 
+  "watercress", "parsley", "bay", "chili", "blackberry", "raspberry", "elderberry", 
+  "gooseberry", "cranberry", "currant", "dragonfruit", "fruit", "berry", "grape", 
+  "unicorn", "zebra", "lion", "tiger", "cheetah", "elephant", "giraffe", "hippopotamus", 
+  "kangaroo", "koala", "panda", "wolf", "bear", "fox", "leopard", "snow leopard", 
+  "wildcat", "coyote", "jackal", "dingo", "whale", "shark", "seal", "dolphin", "octopus", 
+  "jellyfish", "crab", "lobster", "shrimp", "squid", "sea lion", "starfish", "coral", 
+  "turtle", "seahorse", "manatee", "flounder", "salmon", "trout", "bass", "pike", "swordfish", 
+  "mackerel", "herring", "cod", "catfish", "clownfish", "swordfish", "sturgeon", "marlin", 
+  "anglerfish", "cuttlefish", "seagull", "pelican", "heron", "crane", "falcon", "eagle", 
+  "hawk", "buzzard", "parrot", "budgie", "sparrow", "canary", "finch", "vulture", 
+  "woodpecker", "ostrich", "kiwi", "emu", "pigeon", "crow", "raven", "owl", "peacock", 
+  "dove", "swallow", "goose", "duck", "flamingo", "flock", "turtle", "lizard", "gecko", 
+  "iguana", "chameleon", "cobra", "viper", "python", "boa", "frog", "toad", "salamander", 
+  "newt", "snail", "worm", "butterfly", "moth", "beetle", "ant", "termite", "mosquito", 
+  "fly", "wasp", "bee", "grasshopper", "dragonfly", "ladybug", "spider", "tick", "scorpion", 
+  "caterpillar", "cricket", "cockroach", "slug", "snail", "mole", "bat", "armadillo", 
+  "raccoon", "skunk", "opossum", "beaver", "otter", "ferret", "weasel", "mink", "chinchilla", 
+  "hamster", "guinea pig", "rabbit", "hare", "squirrel", "chipmunk", "rat", "mouse", 
+  "hedgehog", "gerbil", "bat", "horse", "cow", "sheep", "goat", "donkey", "pig", "chicken", 
+  "duck", "turkey", "peacock", "rooster", "hen", "goose", "bison", "buffalo", "camel", 
+  "llama", "yak", "reindeer", "elk", "moose", "kangaroo", "koala", "platypus", "wombat", 
+  "armadillo", "beetle", "antelope", "zebra", "gazelle", "horse", "cow", "sheep", "goat", 
+  "bull", "ox", "mule", "donkey", "bison", "buffalo", "camel", "llama", "alpaca", "reindeer", 
+  "polar bear", "grizzly", "brown bear", "panda", "jaguar", "cheetah", "leopard", "lynx", 
+  "wildcat", "tiger", "lion", "jaguar", "puma", "caribou", "mountain lion", "hippopotamus", 
+  "whale", "dolphin", "shark", "sea lion", "orca", "manatee", "walrus", "beluga", "narwhal", 
+  "stingray", "squid", "octopus", "sea cucumber", "clam", "mussel", "perch", "bass", 
+  "salmon", "cod", "herring", "trout", "flounder", "marlin", "angelfish", "cod", "eel", 
+  "cuttlefish", "seahorse", "sturgeon", "eel", "anemone", "jellyfish", "lobster", "shrimp", 
+  "crab", "clam", "seashell", "coral", "fish", "mollusk", "sponges", "barnacle", "algae", 
+  "kelp", "seagrass", "plankton", "zooplankton", "phytoplankton", "krill", "copepod", 
+  "diatom", "plankton", "brine shrimp", "herbivore", "carnivore", "omnivore", "bacterium", 
+  "virus", "parasite", "fungus", "mushroom", "lichens", "moss", "fungi", "protozoa", 
+  "amphibian", "reptile", "mammal", "avian", "insect", "arthropod", "bird", "invertebrate", 
+  "vertebrate", "marine", "terrestrial", "aquatic", "freshwater", "saltwater", "ecosystem", 
+  "habitat", "biome", "conservation", "preservation", "sustainability", "environment", 
+  "biodiversity", "species", "population", "food chain", "food web", "predator", "prey", 
+  "scavenger", "producer", "consumer", "decomposer", "evolution", "natural selection", 
+  "adaptation", "mutation", "genetics", "DNA", "RNA", "cell", "mitochondria", "nucleus", 
+  "chloroplast", "photosynthesis", "respiration", "osmosis", "osmosis", "cell wall", 
+  "membrane", "enzyme", "protein", "carbohydrate", "lipid", "nucleic acid", "amino acid", 
+  "RNA", "mRNA", "protein synthesis", "cloning", "DNA sequencing", "genetic code", "allele", 
+  "gene", "chromosome", "genome", "bacteria", "virus", "vaccine", "pathogen", "antibody", 
+  "immune system", "antibiotic", "fungicide", "pesticide", "biotechnology", "genetic modification", 
+  "nanotechnology", "cybernetics", "nanobots", "artificial intelligence", "machine learning", 
+  "robotics", "algorithm", "neural network", "automation", "quantum computing", "blockchain", 
+  "cryptocurrency", "bitcoin", "ethereum", "NFT", "data science", "big data", "cloud computing", 
+  "internet of things", "networking", "server", "database", "security", "encryption", 
+  "firewall", "hacking", "phishing", "cloud", "wifi", "Bluetooth", "data mining", "virtual reality", 
+  "augmented reality", "simulation", "gaming", "gaming", "esports", "web development", 
+  "front-end", "back-end", "JavaScript", "HTML", "CSS", "Python", "Ruby", "PHP", "Java", "C++", 
+  "Swift", "Kotlin", "Go", "Rust", "Rust programming", "API", "RESTful", "serverless", 
+  "microservices", "DevOps", "CI/CD", "version control", "Git", "GitHub", "GitLab", 
+  "Docker", "Kubernetes", "containers", "virtual machines", "cloud computing", "AWS", "Azure", 
+  "Google Cloud", "serverless", "cloud storage", "cloud infrastructure", "containerization", 
+  "virtualization", "dev environment", "text editor", "IDE", "command line", "CLI", 
+  "browser", "front-end", "UI", "UX", "database", "SQL", "NoSQL", "MongoDB", "MySQL", 
+  "PostgreSQL", "Redis", "Apache", "NGINX", "server", "cache", "load balancer", "CDN", 
+  "microservices", "distributed systems", "API gateway", "continuous integration", 
+  "continuous deployment", "unit testing", "integration testing", "TDD", "BDD", "mocking", 
+  "test automation", "QA", "QA automation", "test framework", "Cypress", "Selenium", 
+  "Jest", "Mocha", "Chai", "Jasmine", "Junit", "Turing machine", "compilers", "language model", 
+  "compiling", "assembly language", "binary", "machine code", "operating system", 
+  "file system", "kernel", "process", "thread", "mutex", "semaphore", "memory management"
+];
+
+
+    const totalLevels = 25;
+    const wordsPerLevel = 15; // Slower level progression
+    const speedIncrement = 0.1; // Reduced speed increase
+
+    const generateWord = () => {
+      return {
+        text: wordList[Math.floor(Math.random() * wordList.length)],
+        x: Math.random() * (canvas.width - 100),
+        y: -20,
+        speed: speed
+      };
+    };
+
+    const drawWord = (word) => {
+      ctx.font = "20px Orbitron";
+      ctx.fillStyle = "white";
+      ctx.fillText(word.text, word.x, word.y);
+    };
+
+    const moveWords = () => {
+      words.forEach((word, index) => {
+        word.y += word.speed;
+        if (word.y >= canvas.height) {
+          lives--;
+          updateLives();
+          words.splice(index, 1);
+          if (lives <= 0) gameOver();
+        }
+      });
+    };
+
+    const checkWord = (typedWord) => {
+      const index = words.findIndex(word => word.text === typedWord);
+      if (index !== -1) {
+        words.splice(index, 1);
+        score++;
+        wordsTypedThisLevel++;
+        updateScore();
+        if (wordsTypedThisLevel >= wordsPerLevel) advanceLevel();
+        return true;
+      }
+      return false;
+    };
+
+    const updateScore = () => {
+      document.getElementById("score").textContent = `Score: ${score}`;
+      if (score > highScore) {
+        highScore = score;
+        document.getElementById("highScore").textContent = `High Score: ${highScore}`;
+      }
+    };
+
+    const updateLives = () => {
+      document.getElementById("lives").textContent = `Lives Remaining: ${lives}`;
+    };
+
+    const updateLevel = () => {
+      document.getElementById("level").textContent = `Level: ${currentLevel}`;
+    };
+
+    const advanceLevel = () => {
+      if (currentLevel < totalLevels) {
+        currentLevel++;
+        speed += speedIncrement; // Gradual speed increase
+        wordsTypedThisLevel = 0;
+        updateLevel();
+      } else {
+        gameOver(true);
+      }
+    };
+
+    const resetGame = () => {
+      words = [];
+      score = 0;
+      speed = 1;
+      lives = 3;
+      currentLevel = 1;
+      wordsTypedThisLevel = 0;
+      updateScore();
+      updateLives();
+      updateLevel();
+      document.getElementById("endMessage").textContent = "";
+    };
+
+    const gameOver = (isVictory = false) => {
+      isGameRunning = false;
+      bgMusic.pause();
+      document.getElementById("endMessage").textContent = isVictory
+        ? `Congratulations! You completed all levels! Final Score: ${score}`
+        : `Game Over! Final Score: ${score}`;
+      document.getElementById("restart-btn").style.display = "inline";
+      document.getElementById("start-btn").style.display = "none";
+    };
+
+    const gameLoop = () => {
+      if (!isGameRunning) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      moveWords();
+      words.forEach(drawWord);
+
+      if (Math.random() < 0.02) words.push(generateWord());
+
+      requestAnimationFrame(gameLoop);
+    };
+
+    document.getElementById("start-btn").addEventListener("click", () => {
+      resetGame();
+      bgMusic.play();
+      isGameRunning = true;
+      document.getElementById("restart-btn").style.display = "none";
+      document.getElementById("start-btn").style.display = "inline";
+      gameLoop();
+    });
+
+    document.getElementById("restart-btn").addEventListener("click", () => {
+      resetGame();
+      bgMusic.play();
+      isGameRunning = true;
+      document.getElementById("restart-btn").style.display = "none";
+      document.getElementById("start-btn").style.display = "inline";
+      gameLoop();
+    });
+
+    document.getElementById("wordInput").addEventListener("input", (e) => {
+      if (checkWord(e.target.value)) {
+        e.target.value = "";
+      }
+    });
+
+    bgMusic.volume = 0.2;
+  </script>
+</body>
+
+</html>
